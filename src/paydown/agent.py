@@ -60,27 +60,69 @@ def run_fix(file: SourceFile, repo_path: Path) -> RefactorResult:
     )
 
 
-def _run_test(file: SourceFile, source: str, repo_path: Path) -> bool:
+_HARNESS = (
+    "import sys\n"
+    "src_path = sys.argv[1]\n"
+    "ns = {}\n"
+    "with open(src_path) as _f:\n"
+    "    exec(compile(_f.read(), src_path, 'exec'), ns)\n"
+    "out = []\n"
+    "for _name, _val in sorted(ns.items()):\n"
+    "    if _name.startswith('_'):\n"
+    "        continue\n"
+    "    if callable(_val) and not isinstance(_val, type):\n"
+    "        try:\n"
+    "            out.append('%s=%r' % (_name, _val()))\n"
+    "        except TypeError:\n"
+    "            pass\n"
+    "print(';'.join(out))\n"
+)
+
+
+def _write_temp(repo_path: Path, suffix: str, content: str) -> Path | None:
     try:
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".py", dir=repo_path, delete=False
+            mode="w", suffix=suffix, dir=repo_path, delete=False
         ) as tmp:
-            tmp.write(source)
-            tmp_path = tmp.name
+            tmp.write(content)
+            return Path(tmp.name)
     except OSError:
-        return False
+        return None
+
+
+def _run_process(cmd: list[str]) -> subprocess.CompletedProcess | None:
     try:
-        proc = subprocess.run(
-            ["python", "-m", "py_compile", tmp_path],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        return proc.returncode == 0
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=30)
     except (subprocess.TimeoutExpired, OSError):
-        return False
+        return None
+
+
+def _behavior_signal(source: str, repo_path: Path) -> str | None:
+    harness = _write_temp(repo_path, ".py", _HARNESS)
+    mod = _write_temp(repo_path, ".py", source)
+    if harness is None or mod is None:
+        if harness:
+            harness.unlink()
+        if mod:
+            mod.unlink()
+        return None
+    try:
+        proc = _run_process(["python", str(harness), str(mod)])
+        return proc.stdout if proc is not None and proc.returncode == 0 else None
     finally:
         try:
-            Path(tmp_path).unlink()
+            harness.unlink()
         except OSError:
             pass
+        try:
+            mod.unlink()
+        except OSError:
+            pass
+
+
+def _run_test(file: SourceFile, source: str, repo_path: Path) -> bool:
+    before = _behavior_signal(file.source, repo_path)
+    after = _behavior_signal(source, repo_path)
+    if before is None or after is None:
+        return False
+    return before == after
