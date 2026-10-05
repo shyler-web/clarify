@@ -65,10 +65,6 @@ def _extract_python_imports(node) -> list[str]:
 
 
 def _extract_imports(source: str, language: str) -> list[str]:
-    if language == "python":
-        parser = Parser(_PY_LANG)
-        tree = parser.parse(source.encode("utf-8"))
-        return _extract_python_imports(tree.root_node)
     patterns = _IMPORT_PATTERNS.get(language, [])
     found: list[str] = []
     for pat in patterns:
@@ -121,8 +117,12 @@ def analyze_repo(path: Path) -> RepoAnalysis:
 
 def _normalize_import(imp: str) -> str:
     imp = imp.strip()
+    if imp.startswith("from "):
+        m = re.match(r"^from\s+(\w+(?:\.\w+)*)\s+import\b", imp)
+        if m:
+            imp = m.group(1)
+        return imp
     imp = re.sub(r"^import\s+", "", imp)
-    imp = re.sub(r"^from\s+", "", imp)
     imp = re.sub(r"^#\s*include\s*[<\"']", "", imp)
     imp = re.sub(r"^use\s+", "", imp)
     imp = imp.strip()
