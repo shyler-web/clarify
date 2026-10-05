@@ -1,0 +1,28 @@
+weights:
+  cognitive_complexity: 0.30
+  size_cyclomatic: 0.20
+  churn: 0.15
+  coupling: 0.15
+  intent_coverage: 0.10
+  ai_provenance: 0.10
+
+thresholds:
+  generic:
+    cognitive_complexity:
+      high: 10
+      low: 4
+    size_cyclomatic:
+      high: 10
+      low: 3
+    churn:
+      high: 0.6
+      low: 0.1
+    coupling:
+      high: 0.6
+      low: 0.2
+    intent_coverage:
+      high: 0.8
+      low: 0.4
+    ai_provenance:
+      high: 0.8
+      low: 0.2
