@@ -16,6 +16,7 @@ dependencies = [
     "radon>=6.0.1",
     "tavily-python>=0.8.4",
     "tree-sitter>=0.26.0",
+    "tree-sitter-python>=0.25.0",
 ]
 
 [project.scripts]
