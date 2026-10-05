@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from pathlib import Path
 
 from paydown.config import load_signal_weights, load_thresholds
 from paydown.repo import RepoAnalysis
@@ -25,7 +24,7 @@ class FileScore:
 
 def rank_files(repo: RepoAnalysis) -> list[FileScore]:
     weights = load_signal_weights()
-    thresholds = load_thresholds()
+    thresholds = load_thresholds()["generic"]
     churn = signal_c_churn(repo)
     coupling = signal_d_coupling(repo)
 
@@ -40,6 +39,6 @@ def rank_files(repo: RepoAnalysis) -> list[FileScore]:
             "ai_provenance": signal_f_provenance(f.source),
         }
         score = debt_index(signals, weights, thresholds, f.path)
-        ranked.append(FileScore(path=Path(f.path), score=score, breakdown=signals))
+        ranked.append(FileScore(path=f.path, score=score, breakdown=signals))
 
     return sorted(ranked, key=lambda fs: fs.score, reverse=True)

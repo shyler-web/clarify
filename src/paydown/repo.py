@@ -50,6 +50,7 @@ class SourceFile:
 @dataclass
 class RepoAnalysis:
     files: list[SourceFile] = field(default_factory=list)
+    root: Path = field(default_factory=Path)
 
 
 def _extract_python_imports(node) -> list[str]:
@@ -99,7 +100,7 @@ def _parse_file(path: Path, language: str) -> SourceFile | None:
 
 def analyze_repo(path: Path) -> RepoAnalysis:
     root = Path(path)
-    analysis = RepoAnalysis()
+    analysis = RepoAnalysis(root=root)
     if not root.is_dir():
         return analysis
     for file_path in sorted(root.rglob("*")):

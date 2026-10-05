@@ -99,8 +99,12 @@ def _repo_age_days(root: Path) -> float:
 
 def signal_c_churn(repo: Path | str | RepoAnalysis) -> dict[str, float]:
     """Churn: commits touching a file per repo age, normalized (0-1)."""
-    root = Path(repo) if isinstance(repo, (str, Path)) else Path(".")
-    paths = [f.path for f in analyze_repo(root).files]
+    if isinstance(repo, RepoAnalysis):
+        root = repo.root
+        paths = [f.path for f in repo.files]
+    else:
+        root = Path(repo)
+        paths = [f.path for f in analyze_repo(root).files]
     changed = _git_changed_files(root)
     if not changed:
         return {p: 0.0 for p in paths}
