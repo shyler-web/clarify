@@ -9,11 +9,11 @@ weights:
 thresholds:
   generic:
     cognitive_complexity:
-      high: 10
-      low: 4
+      high: 0.7
+      low: 0.3
     size_cyclomatic:
-      high: 10
-      low: 3
+      high: 0.7
+      low: 0.3
     churn:
       high: 0.6
       low: 0.1
