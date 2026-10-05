@@ -27,6 +27,10 @@ class ChatMessage:
     content: str
 
 
+def _to_dict(m) -> dict:
+    return {"role": m.role, "content": m.content} if isinstance(m, ChatMessage) else dict(m)
+
+
 def llm_complete(
     messages: list[ChatMessage],
     model: str = DEFAULT_REASONING_MODEL,
@@ -34,7 +38,7 @@ def llm_complete(
     client = _get_client()
     response = client.chat.completions.create(
         model=model,
-        messages=[{"role": m.role, "content": m.content} for m in messages],
+        messages=[_to_dict(m) for m in messages],
     )
     return response.choices[0].message.content
 
