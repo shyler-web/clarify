@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-import math
+import io
+import subprocess
+import tarfile
+import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -30,28 +33,39 @@ def _mean(scores: list[float]) -> float:
 
 
 def _trend(repo: RepoAnalysis) -> list[dict]:
-    """Local trend placeholder: rerank headline metrics across recent commits."""
+    """Re-analyze the last N commits and compute the real debt score for each."""
     if not repo.files:
         return []
     root = repo.root
     try:
-        import subprocess
-
         commits = subprocess.run(
             ["git", "-C", str(root), "log", "--pretty=%h", "-n", "5"],
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=15,
         )
         hashes = [h for h in commits.stdout.split() if h]
     except Exception:
         hashes = []
     trend: list[dict] = []
-    for idx, h in enumerate(hashes, start=1):
+    for h in hashes:
         try:
-            files = [Path(f.path) for f in repo.files if Path(f.path).exists()]
-            idxs = max(1, round(len(files) * (0.9 - 0.1 * (idx - 1))))
-            trend.append({"commit": h, "files": idxs, "debt_index": round(0.1 * (idx - 1), 2)})
+            with tempfile.TemporaryDirectory() as td:
+                arc = subprocess.run(
+                    ["git", "-C", str(root), "archive", h], capture_output=True, timeout=30
+                )
+                if arc.returncode != 0:
+                    continue
+                with tarfile.open(fileobj=io.BytesIO(arc.stdout), mode="r:") as tf:
+                    tf.extractall(td, filter="data")
+                historical = analyze_repo(Path(td))
+                if not historical.files:
+                    continue
+                scores = rank_files(historical)
+                mean = sum(s.score for s in scores) / len(scores)
+                trend.append(
+                    {"commit": h, "files": len(historical.files), "debt_index": round(mean, 3)}
+                )
         except Exception:
             continue
     return trend
