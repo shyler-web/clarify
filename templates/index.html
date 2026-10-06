@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Cognitive-Debt Paydown</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem auto; max-width: 800px; padding: 0 1rem; color: #222; }
+    h1 { border-bottom: 2px solid #eee; padding-bottom: .5rem; }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+    .score { font-size: 1.6rem; font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: .4rem; border-bottom: 1px solid #eee; }
+    a { color: #2563eb; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <h1>Cognitive-Debt Paydown</h1>
+  <p>Repo debt index: <span class="score">{{ "%.3f"|format(debt_index) }}</span></p>
+
+  <div class="card">
+    <h2>Trend</h2>
+    {% if trend %}
+      <table>
+        <tr><th>Commit</th><th>Files</th><th>Debt index</th></tr>
+        {% for t in trend %}
+          <tr><td>{{ t.commit }}</td><td>{{ t.files }}</td><td>{{ "%.2f"|format(t.debt_index) }}</td></tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <p>No commit history available yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Worst files</h2>
+    {% if worst %}
+      <table>
+        <tr><th>File</th><th>Score</th></tr>
+        {% for fs in worst %}
+          <tr><td><a href="/file/{{ fs.path }}">{{ fs.path }}</a></td><td>{{ "%.3f"|format(fs.score) }}</td></tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <p>No source files found.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Audit trail / PRs</h2>
+    {% if prs %}
+      <table>
+        <tr><th>File</th><th>Status</th><th>Tests</th></tr>
+        {% for pr in prs %}
+          <tr><td>{{ pr.path }}</td><td>{{ pr.status }}</td><td>{{ "pass" if pr.test_passes else "fail" }}</td></tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <p>No fixes applied yet.</p>
+    {% endif %}
+  </div>
+</body>
+</html>

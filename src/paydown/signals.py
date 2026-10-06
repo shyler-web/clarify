@@ -149,7 +149,7 @@ def signal_e_intent(src: str) -> float:
         blocks = cc_visit(src)
     except Exception:
         blocks = []
-    funcs = [b for b in blocks if b.is_method or b.__class__.__name__ == "Function"]
+    funcs = [b for b in blocks if getattr(b, "is_method", False) or b.__class__.__name__ == "Function"]
     if not funcs:
         return 0.0
     lines = src.splitlines()
