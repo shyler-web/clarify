@@ -11,7 +11,9 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from paydown.agent import run_fix
+from paydown.config import ConfigError, get_env
 from paydown.knowledge import load_intent
+from paydown.publish import open_pr
 from paydown.rank import rank_files
 from paydown.repo import RepoAnalysis, SourceFile, analyze_repo
 
@@ -30,6 +32,11 @@ _SIGNAL_LABELS = {
 
 def _mean(scores: list[float]) -> float:
     return sum(scores) / len(scores) if scores else 0.0
+
+
+def _branch_slug(path: str) -> str:
+    slug = "".join(c if c.isalnum() else "-" for c in path).strip("-").lower()
+    return slug[:60] or "fix"
 
 
 def _trend(repo: RepoAnalysis) -> list[dict]:
@@ -125,14 +132,21 @@ def create_app(project_path: str) -> FastAPI:
         if source_file is None:
             raise HTTPException(status_code=404, detail=f"File not found: {path}")
         result = run_fix(source_file, state.root)
-        state.prs.append(
-            {
-                "path": path,
-                "status": "open",
-                "explanation": result.explanation,
-                "test_passes": result.test_passes,
-            }
-        )
+        entry = {
+            "path": path,
+            "status": "open",
+            "explanation": result.explanation,
+            "test_passes": result.test_passes,
+        }
+        if result.test_passes:
+            try:
+                repo_slug = get_env("GITHUB_REPO")
+                branch = f"paydown/{_branch_slug(path)}"
+                entry["url"] = open_pr(repo_slug, branch, result)
+            except ConfigError as exc:
+                entry["status"] = "skipped"
+                entry["note"] = f"Publishing skipped: {exc}"
+        state.prs.append(entry)
         return {
             "path": result.path,
             "explanation": result.explanation,

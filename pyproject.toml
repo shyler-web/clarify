@@ -18,10 +18,11 @@ dependencies = [
     "tavily-python>=0.8.4",
     "tree-sitter>=0.26.0",
     "tree-sitter-python>=0.25.0",
+    "uvicorn>=0.34.0",
 ]
 
 [project.scripts]
-paydown = "paydown:main"
+paydown = "paydown.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.12.21,<0.13.0"]

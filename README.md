@@ -6,6 +6,38 @@
 
 Cognitive debt is the gap between *what a codebase is* and *what anyone understands it to be*. It's real, measurable, and currently unmeasured. Teams can't see which files nobody understands, so confusing code quietly accumulates until it becomes unchangeable. `clarify` makes that debt visible as a number, and then does the boring, risky work of paying it down for you.
 
+## Setup
+
+Requires **Python >= 3.12** and **uv**.
+
+```bash
+uv sync        # install dependencies
+uv run paydown --help
+```
+
+## Environment variables
+
+Set these in your shell or a `.env` / CI secret store before running the agent loop or opening PRs.
+
+| Variable | Required for | Purpose |
+|---|---|---|
+| `NEBIUS_API_KEY` | `analyze`, dashboard **Auto-fix** | Authenticate against the Nebius Token Factory endpoint for Nemotron reasoning + routing |
+| `TAVILY_API_KEY` | runtime docs lookup | Live documentation lookups via the Tavily SDK |
+| `GITHUB_TOKEN` | opening PRs | GitHub API auth (create branch, commit, open PR) |
+| `GITHUB_REPO` | opening PRs | Repo slug, e.g. `owner/name`, that refactors are published to |
+
+If `GITHUB_TOKEN` or `GITHUB_REPO` is missing, the dashboard's fix route **skips publishing** (records the PR entry in-memory with a note) instead of crashing, so the UI stays usable without credentials.
+
+## Run
+
+```bash
+# Start the web dashboard
+uv run paydown serve /path/to/repo --port 8000
+
+# Analyze a repo, print the ranked files, and run a fix on the worst file
+uv run paydown analyze /path/to/repo
+```
+
 ## Why it matters
 
 - **Measured, not vibes.** No tool ships a numeric comprehension metric *plus* an automated fix loop. `clarify` is the first confusion-meter that proves its own work by showing the score drop.
@@ -70,14 +102,14 @@ It satisfies the submission gate and sponsor fit by design:
 
 `clarify` is an **active MVP (v0.1) in development**. The design and implementation plan are finalized; the scoring engine, agent loop, dashboard, and delivery pipeline are being built out task-by-task against a passing test suite.
 
-**Planned / in progress (MVP core):**
-- [ ] Signal computation (A–F) and per-file Debt Index
-- [ ] File ranking, worst-first
-- [ ] Agent auto-fix loop with test validation
-- [ ] Explanation Gate + SQLite knowledge store
-- [ ] FastAPI dashboard (overview, drill-down, audit trail)
-- [ ] GitHub PR delivery
-- [ ] CLI (`analyze` / `serve`) and end-to-end wiring
+**MVP core (shipped):**
+- [x] Signal computation (A–F) and per-file Debt Index
+- [x] File ranking, worst-first
+- [x] Agent auto-fix loop with test validation
+- [x] Explanation Gate + SQLite knowledge store
+- [x] FastAPI dashboard (overview, drill-down, audit trail)
+- [x] GitHub PR delivery
+- [x] CLI (`analyze` / `serve`) and end-to-end wiring
 
 **Stretch / next iterations:**
 - Knowledge & Questioning layer — natural-language Q&A over the codebase with evidence-cited answers (embeddings + vector store)
