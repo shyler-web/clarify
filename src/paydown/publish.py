@@ -65,10 +65,20 @@ def _b64(data: str) -> str:
 
 def _open_pr(headers: dict, repo_slug: str, branch: str, base: str, refactor: RefactorResult) -> str:
     title = f"refactor: {refactor.path}"
+    if refactor.before_score is not None and refactor.after_score is not None:
+        score_line = (
+            f"**Debt score**: {refactor.before_score:.2f} → "
+            f"{refactor.after_score:.2f} (recomputed after fix)"
+        )
+    elif refactor.after_score is not None:
+        score_line = f"**Debt score**: recomputed to {refactor.after_score:.2f} after fix"
+    else:
+        score_line = "**Debt score**: recomputed after fix"
     body = (
         f"Refactored `{refactor.path}` to simplify while preserving behavior.\n\n"
-        f"**Before**: original source\n"
-        f"**After**: `{refactor.path}`\n"
+        f"{score_line}\n"
+        f"**Before**: the original `{refactor.path}` source (see diff)\n"
+        f"**After**: `{refactor.path}` refactored, behavior preserved\n"
         f"**Tests passing**: {refactor.test_passes}\n\n"
         f"### Note\n{refactor.explanation}\n"
     )

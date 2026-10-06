@@ -44,3 +44,54 @@ def test_trend_reanalyzes_each_commit_for_real_debt(tmp_path):
     # and must not be the old fabricated 0.0/0.1 ladder.
     assert len({e["debt_index"] for e in trend}) == 2
     assert sorted(e["debt_index"] for e in trend) != [0.0, 0.1]
+
+
+def _debt_index_from_home(client) -> float:
+    import re
+
+    text = client.get("/").text
+    m = re.search(r'class="score">([\d.]+)</span>', text)
+    assert m, text
+    return float(m.group(1))
+
+
+def test_fix_route_returns_clean_error_when_api_key_missing(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from paydown.app import create_app
+
+    (tmp_path / "mod.py").write_text("def f():\n    return 1\n")
+    monkeypatch.delenv("NEBIUS_API_KEY", raising=False)
+    monkeypatch.setenv("PAYDOWN_DB", str(tmp_path / "k.db"))
+    app = create_app(project_path=str(tmp_path))
+    c = TestClient(app)
+    r = c.post(f"/file/{tmp_path / 'mod.py'}/fix")
+    assert r.status_code == 503
+    assert "NEBIUS_API_KEY" in r.text
+
+
+def test_fix_route_writes_back_and_recomputes_score(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from paydown.app import create_app
+
+    (tmp_path / "mod.py").write_text("def f():\n    return 1\n")
+    monkeypatch.setenv("NEBIUS_API_KEY", "test-key")
+    monkeypatch.delenv("GITHUB_REPO", raising=False)
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.setenv("PAYDOWN_DB", str(tmp_path / "k.db"))
+
+    def fake_complete(messages, model=""):
+        return '# simplified\ndef f():\n    """docstring"""\n    return 1\n'
+
+    monkeypatch.setattr("paydown.agent.llm_complete", fake_complete)
+    monkeypatch.setattr("paydown.agent.llm_complete_cheap", fake_complete)
+
+    app = create_app(project_path=str(tmp_path))
+    c = TestClient(app)
+    before = _debt_index_from_home(c)
+    r = c.post(f"/file/{tmp_path / 'mod.py'}/fix")
+    assert r.status_code == 200
+    assert "# simplified" in (tmp_path / "mod.py").read_text()
+    after = _debt_index_from_home(c)
+    assert before != after

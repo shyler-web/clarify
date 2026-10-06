@@ -131,7 +131,31 @@ def create_app(project_path: str) -> FastAPI:
         source_file = state.files_by_path.get(path)
         if source_file is None:
             raise HTTPException(status_code=404, detail=f"File not found: {path}")
-        result = run_fix(source_file, state.root)
+        before = state.score_for(path)
+        try:
+            result = run_fix(source_file, state.root)
+        except ConfigError as exc:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Missing configuration: {exc}",
+            ) from exc
+
+        target = Path(state.root) / result.path
+        try:
+            target.write_text(result.refactored_source, encoding="utf-8")
+        except OSError as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Could not write refactored file {result.path}: {exc}",
+            ) from exc
+
+        state.repo = analyze_repo(state.root)
+        state.scores = rank_files(state.repo)
+        state.files_by_path = {f.path: f for f in state.repo.files}
+        after = state.score_for(path)
+        result.before_score = before.score if before is not None else None
+        result.after_score = after.score if after is not None else None
+
         entry = {
             "path": path,
             "status": "open",
@@ -152,6 +176,8 @@ def create_app(project_path: str) -> FastAPI:
             "explanation": result.explanation,
             "test_passes": result.test_passes,
             "refactored_source": result.refactored_source,
+            "before_score": result.before_score,
+            "after_score": result.after_score,
         }
 
     return app

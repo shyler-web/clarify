@@ -16,6 +16,8 @@ class RefactorResult:
     refactored_source: str
     explanation: str
     test_passes: bool
+    before_score: float | None = None
+    after_score: float | None = None
 
 
 def explanation_gate(source_before: str, source_after: str) -> str:

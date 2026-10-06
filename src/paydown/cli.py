@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from paydown.agent import run_fix
+from paydown.config import ConfigError
 from paydown.rank import rank_files
 from paydown.repo import analyze_repo
 
@@ -58,7 +59,12 @@ def _cmd_analyze(repo_path: str) -> int:
         return 1
 
     print(f"\nRunning a fix on the worst file: {worst.path}")
-    result = run_fix(source, repo.root)
+    try:
+        result = run_fix(source, repo.root)
+    except ConfigError as exc:
+        print(f"{_PROG}: {exc}")
+        print(f"{_PROG}: Missing NEBIUS_API_KEY — set it in your environment (see README).")
+        return 1
     print(f"  test_passes: {result.test_passes}")
     print(f"  explanation: {result.explanation}")
     return 0
